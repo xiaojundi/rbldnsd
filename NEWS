@@ -1,0 +1,819 @@
+This file describes user-visible changes in rbldnsd.
+Newer news is at the top.
+
+1.0pre (Still not official, to be released)
+ - Empty Non Terminals patch. This is a compile-time option and
+   is meant to address some incompatibilities with RFC 7816.
+   Adding the "$ENT" special entity to all the datasets.
+ - Support for systemd added (thanks to Marco d'Itri). Please
+   use --enable-systemd when configuring and make sure that you have
+   pkg-config installed.
+ - Test suite migrated over to python-3. Thanks to
+   Michael Orlitzky for the contributions.
+ - Fix a longstanding bug in the base-template replacement
+ - Removal of deprecated features (aka: NS record compatibility mode)
+ - Adding -F flag, used to identify the log facility of the daemon.
+ - fix tests for systems without ipv6 support, or when ipv6 is
+   disabled in rbldnsd at compile-time
+ - fix tests for API change in pydns >= 2.3.6
+ - It is no longer an error to request binding to a particular
+   address/port more than once. (The subsequent requests are simply
+   ignored.) (This avoids confusion on certain systems/configurations
+   where gethostbyname("localhost") can return 127.0.0.1 multiple
+   times.)
+ - Moving rbldnsd.spec file under contrib/rpm/ to match debian move
+ - Updating various pointers to point to new contrib/ locations
+   (both debian and rpm spec)
+ - Maintenance of RPM spec file to match new file locations, versions,
+   and the make dist tar file naming schema.
+ - Fix for sockaddr_equal() which was missing an IPv6 case.
+
+0.998b (21 Dec 2016)
+ - Fix for memory errors on very large datasets.
+   Patch by Andrew Clayton
+
+0.998a (06 Sep 2016)
+ - Minor fixes in copyright and documentation
+ - bugfix: minor fix to prevent errors on newer compilers
+ - Moving debian/ old directory under contrib/debian/
+
+0.998 (05 Dec 2015)
+
+ - bugfix: correctly handle V4MAPPED (v4 in v6) addresses, the
+   original v6 prefix was wrong.  Thanks to Alex Lasoriti for
+   finding the issue
+ - bugfix: sometimes IP4-based datasets gave false positives when
+   an IP6 dataset were present, and it was also possible to have
+   false positive in IP6 datasets.  Both has been fixed.
+
+0.997a (23 Jul 2013)
+
+ - minor fixes/changes in packaging, no code changes.
+   In particular, fixes a build failure on *BSD introduced in 0.997
+
+0.997 (29 Jun 2013)
+
+ - main feature of this version is ipv6 support.  Many thanks to
+   Geoffrey T. Dairiki for the implementation of btrie (btrie.c) which
+   is far superior to old ip4trie code and handles both v4 and v6
+
+ - feature: ip6trie - new dataset supports listing of arbitrary length
+   ip6 CIDRs, along with individual A/TXT values for each prefix
+
+ - feature: ip6tset - new dataset supports listing of ip6 /64 subnets
+   and the exclusion of /128 subnets; only supports a single A/TXT value
+   for the entire dataset
+
+ - optimization: ip4trie - using new trie implementation (developed for
+   the ip6trie dataset) decreases memory consumption by roughly a factor
+   of three
+
+ - feature: acl dataset - ip6 addresses are now supported in ACLs
+
+ - feature: added --enable-asserts configure option to enable
+   compilation of debugging assertions; assertion checking is
+   disabled by default
+
+ - featurette: zero-length "wildcard" IP4 CIDR prefixes are now
+   allowed in ip4trie and acl datasets.
+
+0.996b (29 Mar 2008)
+
+ - most stuff is very minor, while preparing for larger changes
+   for 0.997 and 1.0.
+
+ - several (mostly minor) bug and portability fixes.
+
+ - feature: ability to specify "base template" for a dataset, using $=
+   variable.  See manpage for details, "Resulting A values and TXT templates"
+   section.
+
+ - incompat: due to the above change ($= base template), in TXT entries which
+   starts with equal sign (=), the first character (which is `=', obviously)
+   is removed.  $= is now treated specially too.
+
+ - feature: (experimental) support for dynamically-loaded extensions (DSOs),
+   in place of (previously unfinished) compile-time "hooks" support.
+   New options -x/-X, to load an extension and to specify argument for it.
+   Usage document has to be written still.
+
+0.996a (27 Jul 2006) (The "34-Birthday Release")
+
+ - -a/-A (-A is new, currently a noop) option clarification/addition.
+   Don't mark -a as experimental anymore, and note that -a mode
+   ("lazy", minimal-answers, w/o AUTH section in every reply) will
+   be the default in future versions.  -A tells rbldnsd to go to
+   "non-lazy" mode.  Document options in the manpage.
+
+ - bugfix: fix configure script breakages:
+   portability: for f; do => for f in "$@"; do
+   fix broken GNU C (mis)detection
+
+ - bugfix: fix dataset "un-expiration". Previously, once a dataset has expired,
+   it never "un-expires" again even if new expire time is in future.  Due to
+   missing reset of a dataset structure field.
+
+ - portability: apparently at least one (broken) linux distribution includes
+   kernel modification which leads to losing SIGALRM interrupts at times.
+   So use setitimer() instead of alarm(), if available.
+
+ - minor code cleanups here and there (fixing (real) GCC-4.1 warnings).
+
+ - Debian-specific: adopt to more recent Debian packaging requiriments,
+   and ensure that Debian package builds with zlib support
+
+0.996 (19 Feb 2006)
+
+ - experimental feature: data expiration support, in form
+    $TIMESTAMP created expires
+   see manpage for details.
+
+ - feature: recognize new 'pass' entry in ACL "dataset", to allow
+   whitelisting of a particular network/host covered by another
+   ACL entry.
+
+ - bugfix (sort of): deal with possible null-pointer dereferences on some
+   systems such as FreeBSD where realloc(smaller_amount) may actually
+   return NULL.  Note that this particular malloc implementation (where
+   realloc() may return NULL if requested to reallocate to a smaller
+   amount of memory) perform very badly with rbldnsd in the first place:
+   rbldnsd tries to free some unused memory at the end of data load
+   process, and realloc() forces a copy so there will be extra copy of
+   a huge data and bad memory fragmentation, so on next reload rbldnsd
+   will most likely just run out of memory.  I think it's best to experiment
+   with alternative malloc implementation on such systems, eg dmalloc.
+
+ - feature: rbldnsd is now able to read gzip-compressed data files, doing
+   transparent on-the-fly decompression, if built with zlib support
+   (if built w/o zlib support, it still checks whenever datafile is
+   compressed and refuses to load it if it is).  Use -C option to turn
+   this feature off.
+
+ - due to zlib support, this version introduces rewritten data-reading
+   loop (previously with fgets()) - on some systems this results in
+   noticeable (re)load speed improvement on large datasets.
+
+ - number of max nameservers (MAX_NS in rbldnsd.h) increased from 20 to 32,
+   per request from Spamhaus.
+
+ - feature: configure script now accepts command-line options (--enable-xx
+   and --disable-xx) to turn optional features on/off (including stats,
+   ipv6, master-dump and zlib), and saves such options into config.status
+   so that automatic re-making will pick up the right options again.
+
+0.995 (28 Apr 2005)
+
+ - feature: allow glue records for nameservers (IPv4 only for now,
+   as there's no AAAA record support yet).  Generic dataset it the
+   most appropriate place to specify actual A records for the NSes.
+
+ - when replying to NS or ANY query to the base zone, rbldnsd now
+   returns set of nameservers in both ANSWER and AUTHORITY section.
+
+ - feature: (initial, experimental) ACL support.  It is possble to force
+   certain kinds of replies to be sent to certain clients (based on the
+   client IP address), regardless of the query the client performs.
+   Read rbldnsd(8) manpage for the details.
+   This feature is experimental.  Basic idea will remain but details are
+   likely to change in the future, as requiriments will be understood
+   better.
+
+ - feature: ENDS0 support for UDPsize, allowing replies larger than 512
+   bytes for clients claiming EDNS0 support (appropriate OPT record in
+   additional section in query).  Not really user-visible change per se,
+   but may be quite visible for clients especially when our replies are large.
+
+0.994b (16 Apr 2005)
+
+ - bugfix: use of uninitialized pointer in ip4set and ip4trie
+   datasets when input data file (A+TXT template for a given
+   entry) is invalid, instead of rejecting the line.  This can
+   lead to "random" crashes.
+
+0.994a (10 Mar 2005)
+
+ - bugfix: for queries for base subzone in combined dataset,
+   rbldnsd improperly returned NXDOMAIN instead of NODATA -- eg
+   a query for sub.bl.example.com where sub is a subzone of
+   a combined dataset "rooted" at bl.example.com resulted in
+   NXDOMAIN while the name obviously does exists.  Fixed (one-liner).
+
+0.994 (18 Dec 2004)
+
+ - bugfix: fix a memory leak when $n-style substitutions
+   are being used: each $n definition resulted in a leak
+   of the substitution text on every reload (used estrdup()
+   but should be using mp_strdup())
+ - feature, sort of: allow to omit support for -d option,
+   thus eliminating some bloat: DEFS = -DNO_MASTER_DUMP
+ - bugfix: fixed master-format dump (-d) for ip4trie - some
+   ranges weren't expanding properly, resulting in missing entries
+ - bugfix: fixed master-format dump (-d) for ip4set: when
+   we have two entries in input:
+     127.0.0.0/8 a
+     127.0.0.2   b
+   for master-format dump there should be 4 lines, not 2 as
+   before:
+     2.0.0.127  b  (was ok before)
+     *.0.0.127  a  (was missing)
+       *.0.127  a  (was missing)
+         *.127  a  (was ok before)
+   Without the two intermediate lines, named returns NXDOMAIN
+   for eg 3.0.0.127 or x.1.0.127.  Quite an.. interesting case...
+
+0.993.1 (29 Jul 2004)
+
+ - only minor, mostly (Debian) package-specific, stuff
+   (see debian/changes for details)
+
+0.993 (01 Jul 2004)
+
+ - bugfix: fix 0.0.0.0 A value being used instead
+   of the specified real IP address in a case like
+   ":127.0.0.2" (use specific A and default TXT)
+   (noted by njabl)
+
+ - feature: allow (optional) names for subdatasets
+   in combined dataset, for better logging.  Specify
+   :name after dataset type in $DATASET line, like
+     $DATASET ip4set:http proxies @
+     $DATASET ip4set:relays relays @
+
+ - feature, safety: implement and enforce $MAXRANGE4
+   special like this:
+     $MAXRANGE /24
+     $MAXRANGE 256
+   the maximum "size" of a single entry, in number
+   of IPv4 addresses it covers.  If an entry covers
+   more addresses, it is ignored (and warning is
+   logged).  The constraint may be decreased by the
+   following $MAXRANGE special, but can not be
+   increased.  Global per dataset.
+ 
+ - feature, safety: ignore incomplete last lines
+   (lines w/o end-of-line terminator) in data
+   files (to prevent mis-interpreting of incomplete
+   data)
+
+ - feature, safety: check for data file changes during
+   reloads (while reading data), and abort loading
+   (and mark all zones to return SERVFAIL until next
+   reload) if a change is detected.
+
+ - safety: do not treat bare numbers as /8 ranges.
+     10 -- wrong from now on
+     10/8 -- ok
+     10-11 -- ok
+
+ - safety: require equal number of octets for x-y
+   style ranges:
+     1.2.3-2.3.4.5 -- wrong
+     1.2.3.0-2.3.4.5 -- ok
+     1.2.3.4-2.3.4 -- wrong
+     1.2.3.4-2.3.4.5 -- ok
+   and the "repeat-last-octet" variant is still
+   ok too, obviously:
+     1.2-3 -- ok
+     1.2.3-4 -- ok
+     1.2.3.4-5 -- ok
+
+ - safety: only accept complete, 4-octet IPv4
+   addresses in ip4tset, do not allow weird stuff
+   like inet_aton() allows:
+     10   = 0.0.0.10 -- wrong
+     10.1 = 10.0.0.1 -- wrong
+
+ - bugfix: several more small fixes for IP4 address
+   parser
+
+ - refine logging a bit, make it less verbose
+   (esp. when logging problems)
+
+ - bugfix: query logging (-l) with background
+   reloading: the file was not flushed properly
+   (resulted in double logging)
+
+ - bugfix: dump (-d) of MX record (generic dataset)
+   was incorrect
+
+ - bugfix: wrong subzone in $ORIGIN when dumping (-d)
+   combined dataset
+
+ - bugfix: incorect (opposite) evaluation of maxttl
+
+0.992 (07 Mar 2004)
+
+ - feature: allow easy turning on/off individual NS
+   records in $NS line, by prefixing unused nameservers
+   with minus sign (-)
+
+ - bugfix: fix -d (master-format dump) for generic dataset
+
+ - bugfix: remove usage of NI_WITHSCOPEID (it was used for
+   unknown reason anyway and broke on latest solaris)
+
+ - #define _LARGEFILE64_SOURCE and use O_LARGEFILE if
+   defined in rbldnsd.c to be able to write larger
+   logfiles.  Dunno whenever it will actually help,
+   but it at least works on linux.
+
+ - old -s option (log reload times/memusage) is gone,
+   it is now turned on all the time, but produces slightly
+   less verbose output.
+
+ - new -s option: write short statistic summaries into
+   given file, to help obtaining data for tools like RRD.
+
+ - format of statistic logging changed slightly, it is
+   a bit less verbose now too (and less confusing)
+
+ - feature: continue processing queries during reloads.
+   For this, rbldnds forks off the child process that
+   process queries while parent performs the reload.
+   Requires 2x more memory (changed datasets will be
+   doubled during reloads).  -f option (not enabled
+   by default).
+
+ - feature: new dataset, ip4tset, very simplified ip4set.
+   Only accepts bare IP addresses, no netranges, no
+   exceptions, but requires 2x less memory and is faster.
+ 
+ - feature: extended -t option, allow minttl and maxttl
+   to be specified (to set constraints for TTLs found
+   in data files).  New syntax is -t defttl:minttl:maxttl,
+   with everything optional (so -t defttl works too, as
+   well as -t ::1d).
+
+ - feature/expectation_fix: add an ability to specify A
+   but inherit default TXT value for an entry:
+    entry :addr:  - specific A, no TXT
+    entry :addr   - specific A, default TXT
+
+ - cleanup: remove redundrant CNAMEs from master-file dump
+   in ip4set
+
+0.991 (30 Nov 2003)
+
+ - in order to be able to overrite both SOA and NS records
+   in data downloaded from 3rd party blocklist to use in
+   local environment, $NS record handling changed.  From
+   now on, rbldnsd expects all nameservers to be specified
+   on one single $NS line.  Compatibility with previous
+   releases preserved for now, but will be removed in the
+   future: if several domain names are specified in $NS
+   line, all other $NS lines are ignored; but when only one
+   nameserver is specified, rbldnsd still collects all such
+   single-ns lines as in previous releases.
+
+ - when the query matches several RRs with different TTLs
+   (e.g. from different datasets), rbldnsd now sets smallest
+   TTL in ALL RRs of this type.
+
+ - when several RRs of the same type exists in generic dataset,
+   we now trying to return them in "random" order.  The
+   "randomization" is very dumb for now.
+
+ - implemented master format dump for ip4trie dataset
+
+0.99 (16 Sep 2003)
+
+ - autoconf-style configuration.  Run ./configure before make.
+   -DSTATS_LL gone; NOSTDINT_H, NOIPv6, NOMEMINFO, NOPOLL are
+   set automatically (hopefully).  I dont use GNU autoconf just
+   because it is too huge, but my own "mini-autoconf" may be not
+   as portable/tested, obviously.  Great thanks to Christian Krackowizer
+   (ckrackowiz at std.schuler-ag.com) for testing this stuff on
+   numerous platforms.
+
+ - remove EasynetDynablock and relays.osirusoft.com conversion scripts
+
+ - bugfix: Fixed range parsing.  E.g., 24.217.64-191 did not work (and any
+   range like this where last two bits where xored into 255).  Spotted by
+   easynet.nl folks, thanks.  This bug occurs only when last 2 numbers,
+   when xored together, gives 255, like 124-131, 120-135, 127-128, 65-190,
+   64-191, ...  The listing will never be matched, so bug does no harm
+   (i.e. no extra, incorrect listings).
+
+ - feature: allow logging to standard output (-l - or -l +-).  See manpage
+   for details.  Idea by Klaus Alexander Seistrup @magnetic-ink.dk.
+
+0.98 (17 Aug 2003)
+
+ - incompatible change: bind address (-b option) is now mandatory.
+   Too many problems with INADDR_ANY, multihomed hosts and wrong
+   source address on replies.
+
+ - feature: allow listening on multiple addresses.  Needed e.g.
+   on hosts where both IPv4 and IPv6 addresses are in use.  Having
+   multiple listening addresses means rbldnsd now uses select/poll
+   (but it works exactly as before if only one listening address
+   specified).  If your system does not provide working poll()
+   system call, specify -DNOPOLL at compile time.
+
+ - feature: recognize host/port syntax in argument for -b option
+   (bind address) to be able to bind to different ports.  -P option
+   is gone again.  Note that delimiter is slash (/), not colon (:),
+   to be able to work with IPv6 addresses correctly.
+
+ - feature, and incompatibility change in dnset DN interpretation.
+   *.example.com is now NOT the same as .example.com.  Specify
+   *.example.com to include all subdomains of example.com, and
+   specify .example.com to include all subdomains AND example.com
+   itself - instead of specifying 2 lines, only one is now needed.
+
+ - bugfix: memleak in combined dataset: NS and SOA caches was
+   allocated for subzones of combined dataset (NS/SOA are never
+   used here).
+
+ - feature: respond to version.bind CH TXT requests (and version.server).
+   Use -v to hide version info from reply, or two -v's to disable this
+   feature completely.
+
+ - reply with REFUSED instead of FORMERR for unknown query class
+
+ - warn about truncated TXT records.  DNS spec allows TXT record to be
+   more than 255 bytes long (by using a series of STRINGs in one RR,
+   each 255 bytes max), but there's no point using TXTs longer than
+   255 bytes for a DNSBL (think of SMTP rejection message)
+
+ - feature: new dataset, ip4trie, to store IP4 CIDR ranges.  Unlike
+   ip4set, ip4trie can only hold one value per CIDR range and returns
+   only closest matching entry.  Experimental.
+
+0.97b (6 Aug 2003)
+
+ - bugfix: there was an error in per-zone statistics counting code
+   introduced in 0.97.  This bug may be triggered remotely by *first*
+   DNS query since rbldnsd startup, provided the query is against a
+   zone for which rbldnsd is not authoritative.  If such out-of-zone
+   query will be first, it will result in instant crash of a server.
+   Subsequent out-of-zone queries will not result in a crash, just
+   wrong counters (for previously queried zone) will be incremented.
+   Impact of this bug is low, since it is difficult to trigger the
+   bug and made rbldnsd crash.
+   Thanks Marco D'Itri (md at linux.it) for pointing this out to me.
+
+0.97a (1 Aug 2003)
+
+ - bugfix: ip4parse_range(): invalid addresses was not marked as such,
+   which may result in various crashes when parsing bogus datafiles.
+   Note this is remotely exploitable bug: if you grab data from a remote
+   system, invalid data may crash you server.  DNS operations (query
+   handling etc) aren't affected by this bug, it is in dataset parsing
+   code.
+   Please note that this fix also restores previously non-working
+   detection of non-zero host part in ranges like 1.2.3.4/24 (proper
+   form is 1.2.3.0/24).  If you want to process such address ranges,
+   specify -e command-line option.
+
+ - feature: recognize and ignore "IN" classname in `generic' dataset,
+   so it is now possible to have
+     @ IN A 127.0.0.1
+
+0.97 (13 Jul 2003)
+
+ - feature: added per-basezone statistic counters
+
+ - osirusoft2rbldnsd.pl: sample script to convert relays.osirusoft.com
+   bind zone into rbldnsd `combined' dataset
+
+ - bugfix: in some rare cases, dnset missed one RR for a
+   DN with multiple RRs.  Spotted by Matthew Sullivan, SORBS.net
+
+ - bugfix: rbldnsd didn't return NS records for base DN query
+   if qtype=ANY.  Also, SOA now will be first in reply, not last.
+
+ - optimization for `combined' dataset: try to not remove stats
+   (possible collected by previous loads) for subzones on reloads
+   (i.e. ip4set keeps approx. number of records in a set to avoid
+   many malloc() calls)
+
+ - new compile-time define: -DSTATS_LL, to keep statistic counters
+   (if not disabled with -DNOSTATS) in variables of type `unsigned
+   long long', not `unsigned long' - on 32-bit machines, this may
+   be 64-bit integers.
+
+0.96 (29 May 2003)
+
+ - fixed alignment bug in mempool.c that caused allocation slip
+
+ - pre-compress SOA and NS records for faster access
+
+ - return NS records in AUTHORITY section of positive answers if
+   available and there's a room for them.
+
+ - restore broken MX record functionality.  Note that MX domain names
+   aren't compressed anymore
+
+ - do not lowercase domain names specified in NS, SOA and MX records
+
+0.95 (27 May 2003)
+
+ - new dataset: combined: a container for other datasets.
+   See manpage for details.
+
+ - reorder zones given in command line (and in combined dataset)
+   to move superzone after all it's subzones.  The order is still
+   important - place most commonly referenced zones first - but
+   it's not a problem anymore to specify superzone first.
+
+0.94 (26 May 2003)
+
+ - implemented -d option (dump zone data in BIND format to stdout)
+ - data loading warnings goes to stderr instead of stdout
+ - Makefile portability tweaks for Solaris
+ - recognize ';' as comment char in addition to '#'; also, officially
+   recognize comments after an entry (IP address or domain name) in
+   ip4set and dnset
+
+0.93 (18 May 2003)
+
+ - reverse change made in 0.91: SOA TTL, when SOA is in AUTHORITY
+   section, should be from SOA's MINTTL (negative cache TTL).
+
+0.92 (17 May 2003)
+
+ - bugfix: fixed SOA screwup introduced in 0.91
+
+0.91 (15 May 2003)
+
+ - rotate nameserver records (simple cyclic rotation)
+ 
+ - understand time units - 1w = 7d = 168h = 10080m = 604800s
+
+ - allow compilation without IPv6 transport support (-DNOIPv6)
+
+ - bugfix: fixed default A RR to be 127.0.0.2, not 2.0.0.127
+
+ - added (preliminary) RPM .spec file (rpmbuild -tb to build from tarball)
+
+0.90 (10 May 2003)
+
+ - IPv6 transport support.  Specify -4 or -6 to use particular
+   transport, default is to use first available.
+
+ - -b (bindaddr) now does not accept port specification, only
+   host address.  Use new option -P to specify listening port.
+
+ - acl (-a) and log filter (-L) - per-IP filters - are gone
+   for now, as I should figure out how to do that with IPv6.
+
+0.89p4 (8 May 2003)
+
+ - since bind9 returns NXDOMAIN for b.example.com even if a.b.example.com
+   exists, all the NXDOMAIN elimination code has been removed.  So much
+   useless work.  Now rbldnsd is small again.
+
+0.89p3 (8 May 2003)
+
+ Incompatible changes:
+
+ - ip4vset and dnvset are gone.  A trivial idea allowed me to merge
+   functionality into ip4set and dnset.
+   This means, in particular, that default A/TXT values may be specified
+   at any place in data files, and applies to all subsequent records up
+   to end of file (defaults gets reset at file boundary), and negative
+   (exclusion) entries works - all in uniform way.
+
+ - $NS special in every dataset instead of NS record in generic dataset.
+   Up to 20 per zone may be specified.  Rbldnsd still does not add NS RRs
+   into normal answers, and perhaps will never do; also it never fills up
+   ADDITIONAL section (e.g. with NS A RRs).
+
+ - rbldnsd will now refuse ANY, SOA and NS queries for zone's base DN if
+   SOA and/or NS records (as specials) aren't specified.
+
+ - Support for NS and SOA record types removed from generic dataset.  Use
+   dataset specials ($SOA and $NS) for this.
+
+ - $SOA and $NS specials requires TTL as a first word, so SOA become
+   8-field instead of 7-field, and NS become 2-field instead of one-field.
+
+ Changes:
+
+ - Allow to specify TTL per dataset (as $TTL special), and for every record
+   in generic dataset (optional field before record type)
+
+ - substitution variables $0,$1,$2...$9 implemented for TXT templates,
+   so it is now possible to use less space and less typing.  I don't know
+   whenever this is useful or not.
+
+0.89p2 (6 May 2003)
+
+ Incompatible changes:
+
+ - rbldnsd now substitutes listed DN in TXT template, instead of query DN,
+   e.g. if some.spammer.example.com is queried, and *.spammer.example.com
+   listed, `spammer.example.com' will be used for $ substitution.  For
+   domain-based lists (dn[v]set) only, IP-based always substitutes an IP.
+
+ - for name-based lists, empty domain names disallowed.
+
+ Changes:
+
+ - completed NXDOMAIN vs subdomains handling for domain-based lists
+   (generic, dn[v]set).  Rbldnsd now very close to BIND behaviour with
+   all it's dataset types.
+
+ - correctly handle zero bytes in DN names ewerywhere.  Before, rbldnsd
+   was incorrect in this area.
+
+ - allow logging to be done to FIFO (ignore SIGPIPE and open with NODELAY)
+
+ - control whenever logging is buffered or not (place `+' in front of
+   logfile (-l option) to make it non-buffered)
+
+ - log (-l) creation errors are now logged to syslog as warnings
+
+ - -q option - quick/quiet start, load zones after backgrounding
+   (so load errors are not fatal)
+
+ - as usual, some more code cleanups etc all over the place.
+
+0.89p1 (4 May 2003)
+
+ many changes.  "Expirience" release...
+
+ Incompatible changes:
+
+ - generic zone does not understand SOA records anymore - SOA now may be
+   specified in every zone data file as $SOA.
+
+ - rbldnsd now matches BIND's runtime behaviour as close as possible.  In
+   particular, rbldnsd now replies to any query type (except of AXFR and
+   the like), giving positive reply if requested name exists.  Also, it now
+   will reply to queries like 0.0.127.bl.example.com (note partial IP)
+   positively with zero answers (certainly, such domain does exists if
+   e.g. 127.0.0.2 is listed).  Additionally, rbldnsd now inserts SOA
+   record (if available) to every answer that contains no answer section
+   (this way, it is possible to specify negative caching ttl for example).
+
+ - order of zones in command line is now important again.  Rbldnsd will
+   stop searching at first matching zone found, so if a superzone specified
+   before some of it's subzone, subzone will never be consulted.  This may
+   change again in the future.
+
+ Changes:
+
+ - much improved manual page, including new "bugs" section and usage of
+   proper (I hope) terms (in particular, "zone" changed to "dataset" where
+   appropriate)
+
+ - default values for ip4vset and dnvset may be specified in any line of
+   data file, and applies to all subsequent entries
+ 
+ - major code cleanups and some redesigns, to follow BIND's behaviour
+
+ - generic dataset may now handle MX records too.
+
+ - proper domain name compression implemented (SOA, NS, MX values)
+
+ - SOA serial value may be set to be dataset's modification timestamp
+   (just specify serial to be 0 and rbldnsd will set it automatically)
+
+0.84 (not released):
+
+ - return positive result with zero records to AAAA, PTR and CNAME
+   queries.  Hack for now, but this way rbldnsd may finally be used
+   together with sendmail and bind...
+
+ - rewrote query parsing routine to be much more accurate and a bit faster.
+
+0.83 (released 2003-04-19)
+
+ - critical security fix in query parsing code - that check was
+   here initially, in version 0.1, but was removed when I optimized
+   that code.  Ugh!..
+
+ - portability: 4.4 FreeBSD does not have mallinfo() and stdint.h
+   (use appropriate -Ddefines, Makefile)
+
+ - access control and filtering logging by IP
+
+ - inlined qsort routine, speed up loading significantly.
+
+ - removed some cruft from the code
+
+0.82 (released 2003-04-05)
+
+ - recognize another variation of IP address range, for easy use:
+
+     127.0.0.1-2 is now treated as 127.0.0.1-127.0.0.2
+     127.0-200   is now treated as 127.0.0.0-127.200.255.255
+
+ - debianized
+
+0.81 (released 2003-04-03)
+
+ - rbldnsd now recognizes IP address ranges in additional to
+   IP prefixes and CIDR ranges, e.g. 127.0.0.2-127.0.1.5 now
+   works with ip4[v]set zonetypes (range is inclusive).  May
+   be disabled at compile time by adding -DNOIP4RANGES to
+   $(DEFS).
+ 
+ - new option, -e, to enable usage of "non-conforming" CIDR
+   ranges, where prefix does not fit within given netmask.
+
+ - -v option is gone, new option -l to specify a logfile
+   (it was a bad idea to log every request via syslog).
+
+ - when constructing a dataset from several files, A and
+   TXT records are now taken from _first_ file for ip4set
+   and dnset (ignoring those in other files), and for
+   ip4vset and dnvset, defaults are in effect for a single
+   file only.
+
+ - implemented removal of duplicate entries on zone data
+   reloads.  May be disabled at compile time by adding
+   -DNOREMOVEDUPS to $(DEFS).
+
+ - various code cleanups
+
+0.80 (released 2003-04-02)
+
+ Incompatible changes:
+
+ - command-line zone syntax has changed.  Consult the manpage
+   for examples.  Basically, instead of
+
+      type:file-zone-name
+
+   rbldnsd now expects
+
+      zone-name:type:file-name
+
+   thus eliminating requiriment that zone name should be in
+   file named after zone.  Also, a LIST (comma-separated) of
+   filenames may be specified instead of a single file.  Note
+   that all 3 fields are required.  Resulting command line
+   may look somewhat ugly (and it may be long), but the effect
+   is much improved flexibility.
+
+ - logging has changed.  Data set may be reused for several
+   zones, so "zone xxx loaded" message is now replaced by
+   "dataset loaded", without any reference to zone(s) which
+   uses that data set.
+
+ - rbldnsd will abort it's startup if it will encounter any
+   error during initial zone loading (missing file, out of
+   memory etc).  After initialization, all errors are not
+   fatal, but partially loaded zones will NOT be serviced
+   (rbldnsd will return REFUSED in this case, as if it does
+   not service this zone at all).  If, on subsequent reload,
+   problematic zone will be back available, it will be included
+   in servicing list automatically.
+
+ Other changes:
+
+ - rbldnsd now recognizes and answers to NS and SOA records.
+   For this to work, one need to specify such records, and
+   for this, new data type was introduced, named `generic'
+   (simplified bind-style format, see manpage for more info).
+   If no `generic' type dataset is specified for a domain,
+   rbldnsd will refuse NS and SOA queries as before.
+
+ - due to changed command line format, it is now possible to
+   construct one zone from several data sets (by repeating
+   the same zone name with different data sets), and to
+   construct one data set from several files (of the same
+   type).  Either way and any combinations works (see NOTES
+   section in the manpage for examples).
+
+ - logging of queries is implemented.  Give -v option to turn
+   it on, but expect large amount of data to be logged on a
+   busy site (every query will be logged via syslog).  This
+   feature is mainly for debugging purposes, and later may
+   be replaced with more advanced logging to a file.
+
+0.74 (newer released)
+
+ Incompatible changes over 0.73:
+
+ - In ip4vset and most notable in dnvset types, it is now possible
+   to specify exclusion of an entry (useful to specify large block
+   and exclude a single entry from it).  This is done by prefixing
+   an entry with an exclamation sign (!).  So, exclamation sign at
+   start of line is now treated specially (it wasn't valid for
+   ip4vset, but it was treated as a part of domain name in dnvset).
+
+ - If no TXT record is available for an entry, rbldnsd will now not
+   return NXDOMAIN but will return zero-entry successeful answer.
+   This is how BIND works.  Something like "valid name but now data
+   of requested type".
+
+ Other changes in 0.74:
+
+ - reorganized storage for TXT records, to speed up loading of zones
+   with non-repeatable TXT values.  With this change, relays.osirusoft
+   zones now requires somewhat more memory (since no hard work for TXT
+   duplication elimination is now taking place), but overall case (where
+   TXTs aren't repeated frequently) is now much faster, in particular,
+   Wirehub's permblockIP.txt now loads in an acceptable time.  Rbldnsd
+   still recognizes and packs adjanced duplicates.  Worst case will be
+   with randomized osirusoft data (it has very many dups, but most are
+   adjanced to each other).
+
+ - reviewed logging, should be ok for buffer-overflow things.
+   Also, prevent log flooding in case input file contains many
+   errors (only first 5 is logged)
+       

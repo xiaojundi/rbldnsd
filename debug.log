@@ -1,0 +1,33 @@
+rbldnsd: listening on 0.0.0.0/1053
+DEBUG: Creating zone: sbl.spamhaus.org:mysql:sbl.spamhaus.org
+DEBUG: Zone created successfully: sbl.spamhaus.org
+DEBUG: Zone has 1 datasets
+DEBUG: Creating zone: xbl.spamhaus.org:mysql:xbl.spamhaus.org
+DEBUG: Zone created successfully: xbl.spamhaus.org
+DEBUG: Zone has 1 datasets
+DEBUG: do_reload called
+rbldnsd: rbldnsd version 1.0pre (Still not official, to be released) started (1 socket(s), 2 zone(s))
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+DEBUG: do_reload called
+rbldnsd: terminating
+rbldnsd: stats for 61secs zone sbl.spamhaus.org: tot=0 ok=0 nxd=0 err=0 in=0 out=0
+rbldnsd: stats for 61secs zone xbl.spamhaus.org: tot=1 ok=0 nxd=0 err=1 in=59 out=48
+rbldnsd: stats for 61sec: tot=1 ok=0 nxd=0 err=1 in=59 out=48
