@@ -55,9 +55,9 @@ static void ds_mysql_reset(struct dsdata *dsd, int freeall) {
 
 static int ds_mysql_parse_config(const char *config, struct dsdata *dsd) {
   /* Hardcoded MySQL configuration */
-  dsd->host = strdup("localhost");
+  dsd->host = strdup("127.0.0.1");
   dsd->user = strdup("root");
-  dsd->password = strdup("");
+  dsd->password = strdup("root");
   dsd->database = strdup("rbl_db");
   dsd->table = strdup("rbl_ips");
   dsd->zone_name = strdup(config); /* Use the config as zone name */
@@ -163,7 +163,7 @@ int ds_mysql_discover_zones(struct zone **zonelist) {
   mysql_conn = mysql_init(NULL);
   if (!mysql_conn) return 0;
   
-  if (!mysql_real_connect(mysql_conn, "localhost", "root", "", "rbl_db", 0, NULL, 0)) {
+  if (!mysql_real_connect(mysql_conn, "127.0.0.1", "root", "root", "rbl_db", 0, NULL, 0)) {
     mysql_close(mysql_conn);
     return 0;
   }
