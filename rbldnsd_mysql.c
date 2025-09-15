@@ -216,6 +216,9 @@ static void ds_mysql_start(struct dataset *ds) {
   printf("DEBUG: ds_mysql_start called for spec: %s\n", ds->ds_spec);
   fflush(stdout);
   
+  /* Clear old data before loading new data */
+  ds_mysql_reset(dsd, 0);
+  
   /* Parse configuration directly from ds_spec */
   if (!ds_mysql_parse_config(ds->ds_spec, dsd)) {
     printf("DEBUG: Failed to parse MySQL configuration\n");

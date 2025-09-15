@@ -98,7 +98,7 @@ void error(int errnum, const char *fmt, ...) {
   _exit(1);
 }
 
-static unsigned recheck = 60;	/* interval between checks for reload */
+static unsigned recheck = 5;	/* interval between checks for reload (5 seconds for MySQL auto-refresh) */
 static int initialized;		/* 1 when initialized */
 static char *logfile;		/* log file name */
 #ifndef NO_STATS
@@ -1091,12 +1091,12 @@ static int do_reload(int do_fork) {
 
   ds = nextdataset2reload(NULL);
   if (!ds && call_hook(reload_check, (zonelist)) == 0) {
-    /* Check if we have MySQL datasets that need loading */
+    /* Check if we have MySQL datasets that need loading - always reload MySQL datasets */
     int has_mysql_datasets = 0;
     for (zone = zonelist; zone; zone = zone->z_next) {
       struct dslist *dsl;
       for(dsl = zone->z_dsl; dsl; dsl = dsl->dsl_next) {
-        if (strcmp(dsl->dsl_ds->ds_type->dst_name, "mysql") == 0 && !dsl->dsl_ds->ds_stamp) {
+        if (strcmp(dsl->dsl_ds->ds_type->dst_name, "mysql") == 0) {
           has_mysql_datasets = 1;
           break;
         }
@@ -1163,21 +1163,23 @@ static int do_reload(int do_fork) {
     ds = nextdataset2reload(ds);
   }
   
-  /* Also load MySQL datasets that don't have files */
-  printf("DEBUG: Checking for MySQL datasets to load...\n");
-  fflush(stdout);
-  for (zone = zonelist; zone; zone = zone->z_next) {
-    struct dslist *dsl;
-    printf("DEBUG: Checking zone: %s\n", zone->z_dn);
+  /* Reload MySQL datasets when triggered by timer (SIGALRM) or during initialization */
+  if ((signalled & SIGNALLED_RELOAD) || !initialized) {
+    printf("DEBUG: Timer-based reload - checking for MySQL datasets to load...\n");
     fflush(stdout);
-    for(dsl = zone->z_dsl; dsl; dsl = dsl->dsl_next) {
-      printf("DEBUG: Found dataset type: %s, stamp: %ld\n", dsl->dsl_ds->ds_type->dst_name, dsl->dsl_ds->ds_stamp);
+    for (zone = zonelist; zone; zone = zone->z_next) {
+      struct dslist *dsl;
+      printf("DEBUG: Checking zone: %s\n", zone->z_dn);
       fflush(stdout);
-      if (strcmp(dsl->dsl_ds->ds_type->dst_name, "mysql") == 0) {
-        printf("DEBUG: Found MySQL dataset, checking if needs loading...\n");
+      for(dsl = zone->z_dsl; dsl; dsl = dsl->dsl_next) {
+        printf("DEBUG: Found dataset type: %s, stamp: %ld\n", dsl->dsl_ds->ds_type->dst_name, dsl->dsl_ds->ds_stamp);
         fflush(stdout);
-        if (!dsl->dsl_ds->ds_stamp) {
-          printf("DEBUG: Loading MySQL dataset (stamp=0)...\n");
+        if (strcmp(dsl->dsl_ds->ds_type->dst_name, "mysql") == 0) {
+          printf("DEBUG: Found MySQL dataset, forcing reload...\n");
+          fflush(stdout);
+          /* Force reload by resetting the stamp to 0 */
+          dsl->dsl_ds->ds_stamp = 0;
+          printf("DEBUG: Loading MySQL dataset (forced reload)...\n");
           fflush(stdout);
           if (!loaddataset(dsl->dsl_ds)) {
             printf("DEBUG: Failed to load MySQL dataset!\n");
@@ -1187,9 +1189,6 @@ static int do_reload(int do_fork) {
             printf("DEBUG: MySQL dataset loaded successfully!\n");
             fflush(stdout);
           }
-        } else {
-          printf("DEBUG: MySQL dataset already loaded (stamp=%ld)\n", dsl->dsl_ds->ds_stamp);
-          fflush(stdout);
         }
       }
     }
